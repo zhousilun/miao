@@ -133,7 +133,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    WS2812_colorSet(0,0,255,255);
+    WS2812_colorSet(0,0,255,0);
     WS2812_Refresh();
     if (bu1) {
       HAL_Delay(20);
