@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ws2812.h"
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,8 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-int flag = 0;
-int bu1 = 0;
+uint8_t rec;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,13 +73,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     HAL_Delay(1000);
   }
 }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if(huart->Instance == UART7)
+  {
+    // rx_byte 就是上位机发来的数据
+    if(rec == '1')
+    {
+      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
+    }
+    else if(rec == '0')
+    {
+      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+    }
 
-//外部中断回调
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  if (GPIO_Pin == GPIO_PIN_15) {
-    bu1=1;       //按钮第一次被按下，等待第二次测消抖
+    // 重新开启下一次中断接收！必须写，不然只收一次
+    HAL_UART_Receive_IT(&huart7, &rec, 1);
   }
 }
+
 /* USER CODE END 0 */
 
 /**
@@ -114,7 +126,7 @@ int main(void)
   MX_BDMA_Init();
   MX_SPI6_Init();
   MX_TIM12_Init();
-  MX_UART4_Init();
+  MX_UART7_Init();
   /* USER CODE BEGIN 2 */
   //定时器启用(包含中断）
   // HAL_TIM_Base_Start_IT(&htim12);
@@ -127,32 +139,34 @@ int main(void)
 
   //启动PWM输出
   HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
+
+  char trans[]="hello";
+
+  HAL_UART_Receive_IT(&huart7, &rec, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
     WS2812_colorSet(0,0,255,0);
     WS2812_Refresh();
-    if (bu1) {
-      HAL_Delay(20);
-      if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15) == 0) {
-      flag = 1;
-      }
-      else {
-        flag = 0;
-        bu1=0;
-      }
-    }
-    if (flag) {
+    keyCheck(GPIOA, GPIO_PIN_15);
+    if (keyPressed()) {
+      WS2812_colorSet(0,0,255,255);
+      WS2812_Refresh();
+      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
+
+      HAL_Delay(1000);
       WS2812_colorSet(0,0,255,0);
       WS2812_Refresh();
-      HAL_Delay(1000);
-      WS2812_colorSet(0,0,0,0);
+      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
 
-      flag = 0;
     }
+    // HAL_UART_Transmit(&huart7 , "hello\n", 6, HAL_MAX_DELAY);
+
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

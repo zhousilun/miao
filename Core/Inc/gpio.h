@@ -39,7 +39,8 @@ extern "C" {
 void MX_GPIO_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void keyCheck(GPIO_TypeDef *,uint16_t);  //检测按钮20ms后是否被按下
+uint8_t keyPressed(void);                //标记位，主循环调用if(keyPreesed){
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

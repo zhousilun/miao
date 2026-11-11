@@ -29,6 +29,9 @@
 /* Configure GPIO                                                             */
 /*----------------------------------------------------------------------------*/
 /* USER CODE BEGIN 1 */
+uint32_t currTick = 0;
+volatile uint8_t bu1 = 0;
+volatile uint8_t bu2 = 0;
 
 /* USER CODE END 1 */
 
@@ -47,6 +50,7 @@ void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin : PA15 */
@@ -62,5 +66,29 @@ void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 2 */
+//外部中断回调
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == GPIO_PIN_15) {
+        bu1=1;       //按钮第一次被按下，等待第二次测消抖
+    }
+}
+
+void keyCheck(GPIO_TypeDef *GPIOx,uint16_t GPIO_Pin) {
+    if (bu1==1) {
+        if (HAL_GetTick()-currTick>=20) {
+            if (HAL_GPIO_ReadPin(GPIOx,GPIO_Pin)==0) {
+                //中断回调函数实现：
+                bu2 = 1;
+            }
+            currTick = HAL_GetTick();
+        }
+        bu1 = 0;
+    }
+}
+uint8_t keyPressed() {
+    uint8_t tmp = bu2;
+    bu2 = 0;
+    return tmp;
+}
 
 /* USER CODE END 2 */
