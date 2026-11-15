@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "bdma.h"
+#include "fdcan.h"
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
@@ -59,39 +60,44 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-//定时器中断
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
-  if (htim->Instance == TIM1) {
-    WS2812_colorSet(0,0,0,255);
-    WS2812_Refresh();
-    HAL_Delay(1000);
-    WS2812_colorSet(0,0,255,0);
-    WS2812_Refresh();
-    HAL_Delay(1000);
-    WS2812_colorSet(0,255,0,0);
-    WS2812_Refresh();
-    HAL_Delay(1000);
-  }
-}
+//定时器中断!!!!!!!!!!!!!!!!
+//
+//
+//有问题，未修改！！！！！！！！！！！！！！！！！
+//
+//
+//
+// void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+//   if (htim->Instance == TIM1) {
+//     WS2812_colorSet(0,0,0,255);
+//     WS2812_Refresh();
+//     HAL_Delay(1000);
+//     WS2812_colorSet(0,0,255,0);
+//     WS2812_Refresh();
+//     HAL_Delay(1000);
+//     WS2812_colorSet(0,255,0,0);
+//     WS2812_Refresh();
+//     HAL_Delay(1000);
+//   }
+// }
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
   if(huart->Instance == UART7)
   {
-    // rx_byte 就是上位机发来的数据
     if(rec == '1')
     {
       __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
+      WS2812_colorSet(0,255,0,0);
     }
     else if(rec == '0')
     {
       __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+      WS2812_colorSet(0,0,255,0);
     }
 
-    // 重新开启下一次中断接收！必须写，不然只收一次
     HAL_UART_Receive_IT(&huart7, &rec, 1);
   }
 }
-
 /* USER CODE END 0 */
 
 /**
@@ -127,6 +133,7 @@ int main(void)
   MX_SPI6_Init();
   MX_TIM12_Init();
   MX_UART7_Init();
+  MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
   //定时器启用(包含中断）
   // HAL_TIM_Base_Start_IT(&htim12);
@@ -150,21 +157,18 @@ int main(void)
   while (1)
   {
     __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
-    WS2812_colorSet(0,0,255,0);
-    WS2812_Refresh();
-    keyCheck(GPIOA, GPIO_PIN_15);
-    if (keyPressed()) {
-      WS2812_colorSet(0,0,255,255);
-      WS2812_Refresh();
-      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
-
-      HAL_Delay(1000);
-      WS2812_colorSet(0,0,255,0);
-      WS2812_Refresh();
-      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
-
-    }
+    WS2812_colorSet(0,1,200,0);
+    // keyCheck(GPIOA, GPIO_PIN_15);
+    // if (keyPressed()) {
+    //   WS2812_colorSet(0,0,255,255);
+    //   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
+    //   HAL_Delay(1000);
+    //   WS2812_colorSet(0,0,255,0);
+    //   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+    // }
     // HAL_UART_Transmit(&huart7 , "hello\n", 6, HAL_MAX_DELAY);
+    motor6020Move(5000, 0, 0, 0);
+
 
 
     /* USER CODE END WHILE */
@@ -189,7 +193,7 @@ void SystemClock_Config(void)
 
   /** Configure the main internal regulator output voltage
   */
-  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
@@ -202,13 +206,13 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 4;
-  RCC_OscInitStruct.PLL.PLLN = 34;
+  RCC_OscInitStruct.PLL.PLLN = 12;
   RCC_OscInitStruct.PLL.PLLP = 1;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
-  RCC_OscInitStruct.PLL.PLLFRACN = 3072;
+  RCC_OscInitStruct.PLL.PLLFRACN = 0;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -221,13 +225,13 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     Error_Handler();
   }

@@ -10,10 +10,11 @@ void WS2812_colorSet(uint8_t index, uint8_t R, uint8_t G, uint8_t B)
     pixel_buf[index].R = R;
     pixel_buf[index].G = G;
     pixel_buf[index].B = B;
-}
 
-void WS2812_Refresh(void)
-{
+
+    //refresh
+
+
     uint8_t i,j;
     uint8_t color;
     uint16_t pos = 0;
@@ -36,7 +37,8 @@ void WS2812_Refresh(void)
         {
             ws2812_tx_buf[pos++] = (color & (0x80 >> j)) ? CODE_1 : CODE_0;
         }
-    }
+}
+
 
     while(WS2812_SPI_HANDLE.State == HAL_SPI_STATE_BUSY_TX);
     HAL_SPI_Transmit(&WS2812_SPI_HANDLE, ws2812_tx_buf, sizeof(ws2812_tx_buf), 10000);
