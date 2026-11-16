@@ -34,6 +34,8 @@ enable_language(C ASM)
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME}
         Core/Src/WS2812.c
+        Core/Inc/GM6020.h
+        Core/Src/GM6020.c
 )
 
 # Add STM32CubeMX generated sources

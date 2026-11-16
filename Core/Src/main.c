@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "ws2812.h"
 #include "stdio.h"
+#include "GM6020.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -50,6 +51,7 @@
 
 /* USER CODE BEGIN PV */
 uint8_t rec;
+uint32_t last_can_time;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -135,6 +137,7 @@ int main(void)
   MX_UART7_Init();
   MX_FDCAN1_Init();
   /* USER CODE BEGIN 2 */
+  HAL_FDCAN_Start(&hfdcan1);
   //定时器启用(包含中断）
   // HAL_TIM_Base_Start_IT(&htim12);
 
@@ -157,17 +160,21 @@ int main(void)
   while (1)
   {
     __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
-    WS2812_colorSet(0,1,200,0);
-    // keyCheck(GPIOA, GPIO_PIN_15);
-    // if (keyPressed()) {
-    //   WS2812_colorSet(0,0,255,255);
-    //   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
-    //   HAL_Delay(1000);
-    //   WS2812_colorSet(0,0,255,0);
-    //   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
-    // }
+    WS2812_colorSet(0,255,255,0);
+    keyCheck(GPIOA, GPIO_PIN_15);
+    if (keyPressed()) {
+      WS2812_colorSet(0,0,255,0);
+      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
+      HAL_Delay(1000);
+      WS2812_colorSet(0,255,0,0);
+      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+      if (HAL_GetTick() -last_can_time >=10) {
+        GM6020Move(5000, 0, 0, 0);
+        last_can_time = HAL_GetTick();
+      }
+    }
     // HAL_UART_Transmit(&huart7 , "hello\n", 6, HAL_MAX_DELAY);
-    motor6020Move(5000, 0, 0, 0);
+
 
 
 

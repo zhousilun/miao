@@ -35,13 +35,12 @@ extern "C" {
 extern FDCAN_HandleTypeDef hfdcan1;
 
 /* USER CODE BEGIN Private defines */
-
 /* USER CODE END Private defines */
 
 void MX_FDCAN1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-void motor6020Move(int16_t i1, int16_t i2, int16_t i3, int16_t i4);
+uint8_t can1SendMessage(uint32_t id, uint8_t *data, uint8_t len);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

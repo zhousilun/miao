@@ -43,10 +43,10 @@ void MX_FDCAN1_Init(void)
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
-  hfdcan1.Init.NominalPrescaler = 3;
+  hfdcan1.Init.NominalPrescaler = 6;
   hfdcan1.Init.NominalSyncJumpWidth = 1;
-  hfdcan1.Init.NominalTimeSeg1 = 21;
-  hfdcan1.Init.NominalTimeSeg2 = 10;
+  hfdcan1.Init.NominalTimeSeg1 = 13;
+  hfdcan1.Init.NominalTimeSeg2 = 2;
   hfdcan1.Init.DataPrescaler = 1;
   hfdcan1.Init.DataSyncJumpWidth = 1;
   hfdcan1.Init.DataTimeSeg1 = 1;
@@ -62,7 +62,7 @@ void MX_FDCAN1_Init(void)
   hfdcan1.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
   hfdcan1.Init.TxEventsNbr = 0;
   hfdcan1.Init.TxBuffersNbr = 0;
-  hfdcan1.Init.TxFifoQueueElmtsNbr = 0;
+  hfdcan1.Init.TxFifoQueueElmtsNbr = 3;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
@@ -110,6 +110,9 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* fdcanHandle)
     GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+    /* FDCAN1 interrupt Init */
+    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(FDCAN1_IT0_IRQn);
   /* USER CODE BEGIN FDCAN1_MspInit 1 */
 
   /* USER CODE END FDCAN1_MspInit 1 */
@@ -133,6 +136,8 @@ void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* fdcanHandle)
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11|GPIO_PIN_12);
 
+    /* FDCAN1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(FDCAN1_IT0_IRQn);
   /* USER CODE BEGIN FDCAN1_MspDeInit 1 */
 
   /* USER CODE END FDCAN1_MspDeInit 1 */
@@ -140,29 +145,39 @@ void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* fdcanHandle)
 }
 
 /* USER CODE BEGIN 1 */
-void motor6020Move(int16_t i1, int16_t i2, int16_t i3, int16_t i4)
+/**
+ * @brief 底层发送一帧标准 CAN 数据
+ * @param id 标识符 (如 0x1FE)
+ * @param data 指向要发送的数据数组的指针
+ * @param length 数据长度 (如 1, 2, 4, 8)
+ * @return 0:成功加入发送队列, 1:失败
+ */
+uint8_t can1SendMessage(uint32_t id, uint8_t *data, uint8_t length)
 {
-  FDCAN_TxHeaderTypeDef TxHeader;
-  uint8_t txbuf[8];
-  uint32_t TxMailbox;
+  FDCAN_TxHeaderTypeDef txHeader;
 
-  TxHeader.Identifier = 0x1FE;
-  TxHeader.IdType = FDCAN_STANDARD_ID;
-  TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-  TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-  TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-  TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+  txHeader.Identifier  = id;
+  txHeader.IdType      = FDCAN_STANDARD_ID;
+  txHeader.TxFrameType = FDCAN_DATA_FRAME;
 
-  txbuf[0] = (i1 >> 8) & 0xFF;
-  txbuf[1] = i1 & 0xFF;
-  txbuf[2] = (i2 >> 8) & 0xFF;
-  txbuf[3] = i2 & 0xFF;
-  txbuf[4] = (i3 >> 8) & 0xFF;
-  txbuf[5] = i3 & 0xFF;
-  txbuf[6] = (i4 >> 8) & 0xFF;
-  txbuf[7] = i4 & 0xFF;
+  // 适配其他电机，兼容不同size of data
+  switch(length) {
+    case 2: txHeader.DataLength = FDCAN_DLC_BYTES_2; break;
+    case 4: txHeader.DataLength = FDCAN_DLC_BYTES_4; break;
+    case 8: txHeader.DataLength = FDCAN_DLC_BYTES_8; break;
+  }
 
-  HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, txbuf);
+  txHeader.FDFormat    = FDCAN_CLASSIC_CAN;  // 经典 CAN
+  txHeader.BitRateSwitch = FDCAN_BRS_OFF;    // 关闭 BRS
+  txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+  txHeader.TxEventFifoControl  = FDCAN_NO_TX_EVENTS;
+  txHeader.MessageMarker       = 0;
+
+  // 把消息加入发送FIFO
+  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, data) == HAL_OK) {
+    return 1; // 成功
+  }
+  return 0; // 失败
 }
 /* USER CODE END 1 */
 
