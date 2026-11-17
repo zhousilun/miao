@@ -31,7 +31,7 @@ void MX_FDCAN1_Init(void)
 {
 
   /* USER CODE BEGIN FDCAN1_Init 0 */
-
+  FDCAN_FilterTypeDef FDCAN1_RXFilter;
   /* USER CODE END FDCAN1_Init 0 */
 
   /* USER CODE BEGIN FDCAN1_Init 1 */
@@ -49,20 +49,20 @@ void MX_FDCAN1_Init(void)
   hfdcan1.Init.NominalTimeSeg2 = 2;
   hfdcan1.Init.DataPrescaler = 1;
   hfdcan1.Init.DataSyncJumpWidth = 1;
-  hfdcan1.Init.DataTimeSeg1 = 1;
-  hfdcan1.Init.DataTimeSeg2 = 1;
+  hfdcan1.Init.DataTimeSeg1 = 13;
+  hfdcan1.Init.DataTimeSeg2 = 2;
   hfdcan1.Init.MessageRAMOffset = 0;
-  hfdcan1.Init.StdFiltersNbr = 0;
-  hfdcan1.Init.ExtFiltersNbr = 0;
-  hfdcan1.Init.RxFifo0ElmtsNbr = 0;
+  hfdcan1.Init.StdFiltersNbr = 8;
+  hfdcan1.Init.ExtFiltersNbr = 8;
+  hfdcan1.Init.RxFifo0ElmtsNbr = 8;
   hfdcan1.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan1.Init.RxFifo1ElmtsNbr = 0;
+  hfdcan1.Init.RxFifo1ElmtsNbr = 8;
   hfdcan1.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan1.Init.RxBuffersNbr = 0;
+  hfdcan1.Init.RxBuffersNbr = 8;
   hfdcan1.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
-  hfdcan1.Init.TxEventsNbr = 0;
-  hfdcan1.Init.TxBuffersNbr = 0;
-  hfdcan1.Init.TxFifoQueueElmtsNbr = 3;
+  hfdcan1.Init.TxEventsNbr = 8;
+  hfdcan1.Init.TxBuffersNbr = 8;
+  hfdcan1.Init.TxFifoQueueElmtsNbr = 8;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
@@ -98,17 +98,17 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* fdcanHandle)
     /* FDCAN1 clock enable */
     __HAL_RCC_FDCAN_CLK_ENABLE();
 
-    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOD_CLK_ENABLE();
     /**FDCAN1 GPIO Configuration
-    PA11     ------> FDCAN1_RX
-    PA12     ------> FDCAN1_TX
+    PD0     ------> FDCAN1_RX
+    PD1     ------> FDCAN1_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN1;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
     /* FDCAN1 interrupt Init */
     HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 0, 0);
@@ -131,10 +131,10 @@ void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* fdcanHandle)
     __HAL_RCC_FDCAN_CLK_DISABLE();
 
     /**FDCAN1 GPIO Configuration
-    PA11     ------> FDCAN1_RX
-    PA12     ------> FDCAN1_TX
+    PD0     ------> FDCAN1_RX
+    PD1     ------> FDCAN1_TX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11|GPIO_PIN_12);
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_0|GPIO_PIN_1);
 
     /* FDCAN1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(FDCAN1_IT0_IRQn);
@@ -145,39 +145,6 @@ void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* fdcanHandle)
 }
 
 /* USER CODE BEGIN 1 */
-/**
- * @brief 底层发送一帧标准 CAN 数据
- * @param id 标识符 (如 0x1FE)
- * @param data 指向要发送的数据数组的指针
- * @param length 数据长度 (如 1, 2, 4, 8)
- * @return 0:成功加入发送队列, 1:失败
- */
-uint8_t can1SendMessage(uint32_t id, uint8_t *data, uint8_t length)
-{
-  FDCAN_TxHeaderTypeDef txHeader;
 
-  txHeader.Identifier  = id;
-  txHeader.IdType      = FDCAN_STANDARD_ID;
-  txHeader.TxFrameType = FDCAN_DATA_FRAME;
-
-  // 适配其他电机，兼容不同size of data
-  switch(length) {
-    case 2: txHeader.DataLength = FDCAN_DLC_BYTES_2; break;
-    case 4: txHeader.DataLength = FDCAN_DLC_BYTES_4; break;
-    case 8: txHeader.DataLength = FDCAN_DLC_BYTES_8; break;
-  }
-
-  txHeader.FDFormat    = FDCAN_CLASSIC_CAN;  // 经典 CAN
-  txHeader.BitRateSwitch = FDCAN_BRS_OFF;    // 关闭 BRS
-  txHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-  txHeader.TxEventFifoControl  = FDCAN_NO_TX_EVENTS;
-  txHeader.MessageMarker       = 0;
-
-  // 把消息加入发送FIFO
-  if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &txHeader, data) == HAL_OK) {
-    return 1; // 成功
-  }
-  return 0; // 失败
-}
 /* USER CODE END 1 */
 

@@ -40,7 +40,6 @@ extern FDCAN_HandleTypeDef hfdcan1;
 void MX_FDCAN1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-uint8_t can1SendMessage(uint32_t id, uint8_t *data, uint8_t len);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

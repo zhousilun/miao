@@ -30,6 +30,7 @@
 #include "ws2812.h"
 #include "stdio.h"
 #include "GM6020.h"
+#include "bsp_can.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -153,6 +154,7 @@ int main(void)
   char trans[]="hello";
 
   HAL_UART_Receive_IT(&huart7, &rec, 1);
+  uint8_t data[] = { 0x00, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -161,18 +163,20 @@ int main(void)
   {
     __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
     WS2812_colorSet(0,255,255,0);
-    keyCheck(GPIOA, GPIO_PIN_15);
-    if (keyPressed()) {
-      WS2812_colorSet(0,0,255,0);
-      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
-      HAL_Delay(1000);
-      WS2812_colorSet(0,255,0,0);
-      __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
-      if (HAL_GetTick() -last_can_time >=10) {
-        GM6020Move(5000, 0, 0, 0);
-        last_can_time = HAL_GetTick();
-      }
-    }
+    // keyCheck(GPIOA, GPIO_PIN_15);
+    // if (keyPressed()) {
+    //   WS2812_colorSet(0,0,255,0);
+    //   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 800);
+    //   HAL_Delay(1000);
+    //   WS2812_colorSet(0,255,0,0);
+    //   __HAL_TIM_SET_COMPARE(&htim12, TIM_CHANNEL_2, 0);
+    // if (HAL_GetTick() -last_can_time >=10) {
+    HAL_Delay(5);
+    // fdcanx_send_data(&hfdcan1, 0x1FE, data, 8);
+    GM6020Move(5000, 0, 0, 0);
+    //   last_can_time = HAL_GetTick();
+    // }
+    // }
     // HAL_UART_Transmit(&huart7 , "hello\n", 6, HAL_MAX_DELAY);
 
 

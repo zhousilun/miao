@@ -36,6 +36,11 @@ add_executable(${CMAKE_PROJECT_NAME}
         Core/Src/WS2812.c
         Core/Inc/GM6020.h
         Core/Src/GM6020.c
+        Core/Src/bsp_can.c
+        Core/Inc/bsp_can.h
+        Core/Inc/pid.h
+        Core/Src/pid.c
+
 )
 
 # Add STM32CubeMX generated sources

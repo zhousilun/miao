@@ -2,7 +2,8 @@
 // Created by Redmi on 2026/11/16.
 //
 #include "main.h" // 调用底层 CAN 发送函数
-#include "fdcan.h"
+#include "bsp_can.h"
+#include "GM6020.h"
 
 /**
  * @brief 控制 ID1~4 的四个 GM6020 电机 (电流控制模式)
@@ -40,5 +41,6 @@ void GM6020Move(int16_t cur1, int16_t cur2, int16_t cur3, int16_t cur4)
     data[7] =  cur4       & 0xFF;
 
     // 3. 调用发送函数
-    can1SendMessage(0x1FE, data, 8);
+    fdcanx_send_data(&hfdcan1, 0x1FE, data, 8);
+
 }
